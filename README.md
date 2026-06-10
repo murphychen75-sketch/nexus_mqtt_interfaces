@@ -9,16 +9,9 @@ NEUXS 无人船各子系统（Jetson、MCU、APM 及传感器）与云端之间�
 | 传输协议 | MQTT 5.0 |
 | Payload 格式 | JSON (UTF-8) |
 
-## 文档目录
+## 协议文档
 
-| 文档 | 内容 |
-| --- | --- |
-| [协议规范](docs/00-overview.md) | 基础信息、产品与设备抽象、Topic 规范、物模型表 |
-| [话题架构](docs/01-topics.md) | 系统主题模板，Jetson / MCU 处理域 Topic 清单 |
-| [下行数据格式](docs/02-downlink-messages.md) | 云端 → 设备：服务指令与回复 Payload 定义 |
-| [上行数据格式](docs/03-uplink-messages.md) | 设备 → 云端：属性、事件 Payload 定义 |
-| [设备清单](docs/04-device-catalog.md) | IO 设备清单、对象类型与视觉目标类别 |
-| [附录](docs/05-appendix.md) | 错误码、通信频率建议、MQTT 配置建议 |
+完整协议见 **[docs/protocol.md](docs/protocol.md)**，包含协议规范、话题架构、上下行数据格式、设备清单及附录。
 
 ## Topic 模板
 
@@ -40,8 +33,6 @@ NEUXS 无人船各子系统（Jetson、MCU、APM 及传感器）与云端之间�
 | GPS | `gps` | `gps_01` |
 | IO 控制器 | `io` | `io_01` |
 
-完整物模型表见 [协议规范](docs/00-overview.md)。
-
 ## 参与维护
 
-修改协议内容请直接编辑 `docs/` 目录下对应文档，通过 Pull Request 提交变更。
+修改协议内容请直接编辑 [docs/protocol.md](docs/protocol.md)，通过 Pull Request 提交变更。
