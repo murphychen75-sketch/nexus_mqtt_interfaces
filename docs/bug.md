@@ -228,9 +228,147 @@ Jetson 侧 `usv_mqtt_bridge` 配置（`params.yaml`）对部分 Topic 已按选�
 
 ---
 
+## 附录 A：`protocol.md` 已完成的修订摘要
+
+> 本节汇总 2026-06-22 前后对 [protocol.md](./protocol.md) 的协议收敛修改，便于与 `usv_mqtt_bridge` 实现对照。  
+> **未改动的部分**：协议版本号仍为 V1.1、版本日期仍为 2026-06-01；§3/§4 中 JSON 示例的扁平 `"time"` 字段尚未统一为桥接层 `timestamp/seq/data`（见 §2）。
+
+### A.1 架构与网关边界（§1.2、§2）
+
+| 修订项 | 修改前（概要） | 修改后 |
+| --- | --- | --- |
+| MQTT 直连设备 | 未明确仅两网关 | 明确仅 **`jetson`**、**`mcu`** 两个网关 MQTT 直连 |
+| 子设备代发 | 笼统描述 | 其余设备为网关子设备，由对应网关代发 |
+| GPS 归属 | 未区分网关 | **GPS 仅 MCU 网关代发，不经 Jetson** |
+| 雷达扫描上行 | §2.2 含 `radar_mm`、`radar_nav` 属性上报 | **原始扫描数据不上传 MQTT**；保留 `radar_nav_map` 地图与 `radar_nav_config` 服务 |
+| §2.2 / §2.3 注释 | 「上报」表述 | 改为「网关代发」，并注明 Jetson 域不含雷达扫描上行 |
+
+### A.2 物模型表（§1.3.3）
+
+**已删除条目：**
+
+- `thruster` / `thruster_01`（推进器产品）
+- `apm` / `apm_01`（APM 飞控产品）
+
+**保留并标注：**
+
+- `jetson`、`mcu` 行增加「（网关）」说明
+
+**仍保留（硬件仍存在，仅扫描属性不上传）：**
+
+- `radar_mm`、`radar_nav`（用于配置服务 / 地图等，非扫描 property 上报）
+
+### A.3 Jetson 处理域 Topic（§2.2）
+
+**下行服务 — 已删除：**
+
+- `service/manual_ctrl` / `manual_ctrl_reply`（移至本 bug 文档 §4 待讨论）
+
+**下行服务 — 已删除（油机控制）：**
+
+- 原 §3.13–3.14 `service/thruster_ctr`（整节删除，油机控制不走 Jetson）
+
+**上行属性 — 已删除：**
+
+- `property/thruster` / `thruster_status`（推进器数据）
+- `property/apm_imu`（IMU 数据）
+- `property/radar_mm`（毫米波雷达扫描）
+- `property/radar_nav`（导航雷达扫描）
+
+**上行属性 — 保留：**
+
+- `status_jetson`、`radar_nav_map`、`perception_trajectory`
+- 视频 / 视觉相关 event、service 及子设备 `productKey` 路径
+
+**上行事件 — 未在 Jetson 域新增：**
+
+- `mcu_heartbeat` 仅出现在 §2.3 MCU 域（`/sys/mcu/mcu_01/...`），Jetson 不得代发
+
+### A.4 MCU 处理域（§2.3）
+
+- 结构未大改；`gps_status`、`mcu_heartbeat` 等仍归属 MCU 及对应子设备 `productKey`
+- 与修订一致：**GPS、MCU 心跳不由 Jetson 网关承载**
+
+### A.5 下行数据格式（§3）
+
+| 原章节 | 处置 |
+| --- | --- |
+| §3.5 `manual_ctrl` | **删除**，草案记入 bug §4 |
+| §3.13–3.14 `thruster_ctr` / 回复 | **删除** |
+| §3.6–3.12 | 重编号为 §3.5–3.11（自动任务、参数、视频、IO、自检、雷达配置） |
+| §3.10 自检 `modules` 枚举 | 删除 `thruster` 模块项 |
+
+### A.6 上行数据格式（§4.1）
+
+**已删除整节：**
+
+- 原 §4.1.2 推进器数据（`property/thruster_status`）
+- 原 §4.1.3 IMU 数据（`property/apm_imu`）
+- 原 §4.1.2–4.1.3 毫米波 / 导航雷达**扫描**数据格式（第二轮删除）
+- 原 §4.1.17 APM 飞控状态（`property/status_apm`）
+- §4.1.16 中 APM 心跳（`event/apm_heartbeat`）段落
+
+**重编号后当前 §4.1 结构（4.1.1–4.1.12）：**
+
+1. Jetson 状态  
+2. 导航雷达地图  
+3. 融合轨迹  
+4. GPS（MCU）  
+5. 气象站（MCU）  
+6. 测深仪（MCU）  
+7. 电池（MCU）  
+8. 油箱（MCU）  
+9. MCU 系统状态  
+10. AIS（MCU）  
+11. IO 设备状态（MCU）  
+12. 心跳（Jetson + MCU，MCU 路径为 `mcu/mcu_01`）
+
+**其他：**
+
+- `diag_result` 示例中删除 `thruster` 自检模块项
+
+### A.7 附录频率建议（§6.2）
+
+**已删除行：**
+
+- IMU 数据、推进器数据（第一轮）
+- 雷达扫描数据（第二轮）
+
+**保留：**
+
+- GPS、雷达**地图**、感知轨迹、视觉目标等
+
+### A.8 配套文档（非 protocol 正文）
+
+| 文件 | 修改 |
+| --- | --- |
+| [bug.md](./bug.md) | 新建；记录待决事项、envelope 说明、`params.yaml` 待改清单（§8） |
+| [README.md](../README.md) | 增加 bug.md 链接；物模型速查删除 thruster/apm；描述改为双网关架构 |
+
+### A.9 明确未纳入本次 protocol 修订的项
+
+以下仍记在 bug 文档其它章节，**尚未写入 protocol 正文**：
+
+- `event/task_prog` 任务进度（§6）
+- `property/status` 整机状态（§3）
+- `service/manual_ctrl` 是否恢复（§4）
+- Payload 示例统一为 `timestamp/seq/data`（§2）
+- `usv_mqtt_bridge` / `params.yaml` 与协议对齐（§7、§8）
+
+### A.10 IO 域未删内容（说明）
+
+以下含 `thruster_*` 字样的内容**保留**，属于 MCU **IO 继电器设备名**，非 MQTT 推进器物模型：
+
+- §3.8 `io_ctrl` 中 `thruster_left_action` / `thruster_right_action`
+- §4.1.11 `io_status` 中对应 status 字段
+- §5.1 设备清单中 `execution_thruster`
+
+---
+
 ## 变更记录
 
 | 日期 | 说明 |
 | --- | --- |
 | 2026-06-22 | 初版：thruster/apm/manual_ctrl 协议删减后的待决事项汇总 |
 | 2026-06-22 | 更新 envelope 描述；删除雷达扫描/GPS/mcu_heartbeat Jetson 代发；新增 §8 params 待改清单 |
+| 2026-06-22 | 新增附录 A：`protocol.md` 修订摘要 |
