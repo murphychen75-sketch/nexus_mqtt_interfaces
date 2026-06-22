@@ -20,6 +20,8 @@
 + 网关设备具备独立 IP，并可关联多个子设备。
 + 网关子设备没有独立 IP，通过网关设备代收发数据。
 + 设备必须从属于产品，并归属到总产品（船设备）。总设备即 M10 或 NEUXS 船舶总产品。
++ **MQTT 直连设备仅有两个网关：`jetson`（Jetson 主控）与 `mcu`（MCU 执行单元）。** 视频、视觉、IO、GPS 等功能设备均为网关子设备，由对应网关代收发 MQTT 数据；其中 **GPS 仅由 MCU 网关代发，不经 Jetson**。
++ **毫米波雷达、导航雷达的原始扫描数据（`property/radar_mm`、`property/radar_nav`）当前版本不上传 MQTT**；导航雷达地图（`property/radar_nav_map`）与配置查询服务（`service/radar_nav_config`）仍可由 Jetson 网关代发。
 + 本文的 `productKey/deviceName` 按可迁移的功能设备展开，例如 `gps/gps_01`、`io/io_01`、`ais/ais_01`。
 
 
@@ -61,10 +63,8 @@
 #### 1.3.3 物模型表
 | 功能 | productKey | deviceName |
 | --- | ---: | ---: |
-| Jetson 主控 | `jetson` | `jetson_01` |
-| MCU 执行单元 | `mcu` | `mcu_01` |
-| 推进器 | `thruster` | `thruster_01` |
-| apm飞控 | `apm` | `apm_01` |
+| Jetson 主控（网关） | `jetson` | `jetson_01` |
+| MCU 执行单元（网关） | `mcu` | `mcu_01` |
 | 毫米波雷达 | `radar_mm` | `radar_mm_01` |
 | nav导航雷达 | `radar_nav` | `radar_nav_01` |
 | 视频 | `aivideo` | `aivideo_01` |
@@ -91,7 +91,7 @@
 
 
 ### 2.2 Jetson 处理域相关主题
-> 注：本节按 Jetson 处理域归类，但实际 Topic 以“对应实际 Topic”列为准；视频、雷达、视觉、推进器、IMU、融合感知等可按独立 `productKey/deviceName` 上报。
+> 注：本节按 Jetson 网关处理域归类，但实际 Topic 以“对应实际 Topic”列为准；视频、视觉、融合感知、导航雷达地图等子设备可按独立 `productKey/deviceName` 由 Jetson 网关代发。**不含**毫米波/导航雷达原始扫描数据上行（见 §1.2）。
 >
 
 #### 下行服务（云端 → Jetson）
@@ -100,7 +100,6 @@
 | `/sys/${productKey}/${deviceName}/thing/service/estop` | `/sys/jetson/jetson_01/thing/service/estop` | 急停指令 | 1 |
 | `/sys/${productKey}/${deviceName}/thing/service/arm` | `/sys/jetson/jetson_01/thing/service/arm` | 设防/解锁 | 1 |
 | `/sys/${productKey}/${deviceName}/thing/service/mode` | `/sys/jetson/jetson_01/thing/service/mode` | 模式切换 | 1 |
-| `/sys/${productKey}/${deviceName}/thing/service/manual_ctrl` | `/sys/jetson/jetson_01/thing/service/manual_ctrl` | 手动控制指令 | 1 |
 | `/sys/${productKey}/${deviceName}/thing/service/auto_task` | `/sys/jetson/jetson_01/thing/service/auto_task` | 自动任务指令 | 1 |
 | `/sys/${productKey}/${deviceName}/thing/service/params` | `/sys/jetson/jetson_01/thing/service/params` | 参数下发 | 1 |
 | `/sys/${productKey}/${deviceName}/thing/service/aivideo_ctrl` | `/sys/aivideo/aivideo_01/thing/service/aivideo_ctrl` | 视频流控制 | 1 |
@@ -113,7 +112,6 @@
 | estop | `/sys/jetson/jetson_01/thing/service/estop_reply` | 急停指令回复 | 1 |
 | arm | `/sys/jetson/jetson_01/thing/service/arm_reply` | 设防/解锁回复 | 1 |
 | mode | `/sys/jetson/jetson_01/thing/service/mode_reply` | 模式切换回复 | 1 |
-| manual_ctrl | `/sys/jetson/jetson_01/thing/service/manual_ctrl_reply` | 手动控制指令回复 | 1 |
 | auto_task | `/sys/jetson/jetson_01/thing/service/auto_task_reply` | 自动任务指令回复 | 1 |
 | params | `/sys/jetson/jetson_01/thing/service/params_reply` | 参数下发回复 | 1 |
 | aivideo_ctrl | `/sys/aivideo/aivideo_01/thing/service/aivideo_ctrl_reply` | 视频流控制回复 | 1 |
@@ -134,16 +132,12 @@
 | 主题模板 | 对应实际 Topic | 描述 | 频率 | QoS |
 | --- | --- | --- | --- | --- |
 | `/sys/${productKey}/${deviceName}/thing/property/status_jetson` | `/sys/jetson/jetson_01/thing/property/status_jetson` | Jetson 系统状态 | 中低频 | 0 |
-| `/sys/${productKey}/${deviceName}/thing/property/thruster` | `/sys/thruster/thruster_01/thing/property/thruster` | 推进器数据 | 10Hz | 1 |
-| `/sys/${productKey}/${deviceName}/thing/property/apm_imu` | `/sys/apm/apm_01/thing/property/apm_imu` | IMU 数据 | 20-50Hz | 0 |
-| `/sys/${productKey}/${deviceName}/thing/property/radar_mm` | `/sys/radar_mm/radar_mm_01/thing/property/radar_mm` | 毫米波雷达数据 | 20Hz | 0 |
-| `/sys/${productKey}/${deviceName}/thing/property/radar_nav` | `/sys/radar_nav/radar_nav_01/thing/property/radar_nav` | 导航雷达扫描数据 | 1-2Hz | 0 |
 | `/sys/${productKey}/${deviceName}/thing/property/radar_nav_map` | `/sys/radar_nav/radar_nav_01/thing/property/radar_nav_map` | 导航雷达地图 | 实时 | 1 |
 | `/sys/${productKey}/${deviceName}/thing/property/perception_trajectory` | `/sys/jetson/jetson_01/thing/property/perception_trajectory` | 融合感知轨迹 | 实时 | 0 |
 
 
 ### 2.3 MCU 处理域相关主题
-> 注：本节按 MCU 处理域归类，但实际 Topic 以“对应实际 Topic”列为准；GPS、气象、测深、电池、油箱、IO、AIS 等可按独立 `productKey/deviceName` 上报。
+> 注：本节按 MCU 网关处理域归类，但实际 Topic 以“对应实际 Topic”列为准；GPS、气象、测深、电池、油箱、IO、AIS 等子设备可按独立 `productKey/deviceName` 由 MCU 网关代发。
 >
 
 #### 下行服务（云端 → MCU）
@@ -251,43 +245,7 @@
 | `mode` | **<font style="color:rgb(15, 17, 21);">auto，manual,RTL,dock,follow,loiter,hold</font>** |
 
 
-### 3.5 手动控制指令
-**Topic:** `/sys/${productKey}/${deviceName}/thing/service/manual_ctrl`
-
-**对应实际 Topic:** `/sys/jetson/jetson_01/thing/service/manual_ctrl`
-
-```json
-{
-  "time": 1703123456789,
-    "x": 500,
-    "y": 0,
-    "z": 0,
-    "r": 0,
-    "buttons": 64
-  
-}
-```
-
-| 参数 | 类型 | 范围 | 说明 |
-| --- | --- | --- | --- |
-| x | int | -1000~1000 | 前进/后退 |
-| y | int | -1000~1000 | 横移 |
-| z | int | -1000~1000 | 备用油门 |
-| r | int | -1000~1000 | 转向 |
-| buttons | int | - | 按键位掩码 |
-
-
-| <font style="color:rgb(15, 17, 21);">消息字段</font> | <font style="color:rgb(15, 17, 21);">对应控制</font> | <font style="color:rgb(15, 17, 21);">正值含义</font> | <font style="color:rgb(15, 17, 21);">负值含义</font> |
-| --- | --- | --- | --- |
-| `**<font style="color:rgb(15, 17, 21);background-color:rgb(235, 238, 242);">x</font>**` | <font style="color:rgb(15, 17, 21);">油门/前进后退</font> | <font style="color:rgb(15, 17, 21);">前进</font> | <font style="color:rgb(15, 17, 21);">后退</font> |
-| `**<font style="color:rgb(15, 17, 21);background-color:rgb(235, 238, 242);">y</font>**` | <font style="color:rgb(15, 17, 21);">横移（仅带侧推的船）</font> | <font style="color:rgb(15, 17, 21);">右移</font> | <font style="color:rgb(15, 17, 21);">左移</font> |
-| `**<font style="color:rgb(15, 17, 21);background-color:rgb(235, 238, 242);">r</font>**` | <font style="color:rgb(15, 17, 21);">航向/转向</font> | <font style="color:rgb(15, 17, 21);">右转</font> | <font style="color:rgb(15, 17, 21);">左转</font> |
-| `**<font style="color:rgb(15, 17, 21);background-color:rgb(235, 238, 242);">z</font>**` | <font style="color:rgb(15, 17, 21);">备用油门（通常不用）</font> | <font style="color:rgb(15, 17, 21);">正推力</font> | <font style="color:rgb(15, 17, 21);">负推力</font> |
-
-
-
-
-### 3.6 自动任务
+### 3.5 自动任务
 **Topic:** `/sys/${productKey}/${deviceName}/thing/service/auto_task`
 
 **对应实际 Topic:** `/sys/jetson/jetson_01/thing/service/auto_task`
@@ -328,7 +286,7 @@
 | `mode` | 路径执行模式 |
 
 
-### 3.7 参数下发
+### 3.6 参数下发
 **Topic:** `/sys/${productKey}/${deviceName}/thing/service/params`
 
 **对应实际 Topic:** `/sys/jetson/jetson_01/thing/service/params`
@@ -352,7 +310,7 @@
 }
 ```
 
-### 3.8 视频控制
+### 3.7 视频控制
 **Topic:** `/sys/${productKey}/${deviceName}/thing/service/aivideo_ctrl`
 
 **对应实际 Topic:** `/sys/aivideo/aivideo_01/thing/service/aivideo_ctrl`
@@ -378,7 +336,7 @@
 | `bitrate_kbps` | 码率（kbps） |
 
 
-### 3.9 IO 设备控制（MCU）
+### 3.8 IO 设备控制（MCU）
 **Topic:** `/sys/${productKey}/${deviceName}/thing/service/io_ctrl`
 
 **对应实际 Topic:** `/sys/io/io_01/thing/service/io_ctrl`
@@ -427,7 +385,7 @@
 | action | string | on/off |
 
 
-### 3.10 自检请求
+### 3.9 自检请求
 **Topic:** `/sys/${productKey}/${deviceName}/thing/service/diag_request`
 
 **对应实际 Topic:** `/sys/mcu/mcu_01/thing/service/diag_request`
@@ -453,12 +411,11 @@
 | all | 全部模块 |
 | imu | IMU 模块 |
 | gps | GPS 模块 |
-| thruster | 推进器模块 |
 | battery | 电池模块 |
 | comms | 通信模块 |
 
 
-### 3.11 导航雷达扫描配置查询（Jetson）
+### 3.10 导航雷达扫描配置查询（Jetson）
 **Topic:** `/sys/${productKey}/${deviceName}/thing/service/radar_nav_config`
 
 **对应实际 Topic:** `/sys/radar_nav/radar_nav_01/thing/service/radar_nav_config`
@@ -473,7 +430,7 @@
 
 
 
-### 3.12 导航雷达扫描配置查询回复
+### 3.11 导航雷达扫描配置查询回复
 **Topic:** `/sys/${productKey}/${deviceName}/thing/service/radar_nav_config_reply`
 
 **对应实际 Topic:** `/sys/radar_nav/radar_nav_01/thing/service/radar_nav_config_reply`
@@ -486,47 +443,6 @@
     "message": "success",
     "angular_resolution_deg": 0.9,
     "max_range_m": 200.0
-  
-}
-```
-
-### 3.13 油机控制
-**Topic:** `/sys/${productKey}/${deviceName}/thing/service/thruster_ctr`
-
-**对应实际 Topic:** `/sys/thruster/thruster_01/thing/service/thruster_ctr`
-
-```json
-{
-  "time": 1703123456789,
-   "tiltSwitch":  1,
-   "level": -1
-    
-    
-  
-}
-```
-
-| 字段/位置 | 说明 |
-| --- | --- |
-| `tiltSwitch` | 0：不变，1：起翘，2：落桨 ,3:启动，4关闭 |
-| level | -4~+4，0:空挡,+1表示为前进1档，-1为后退1档，4档即100%最大 |
-
-
-
-
-### 3.14 油机控制回复
-**Topic:** `/sys/${productKey}/${deviceName}/thing/service/thruster_ctr_reply`
-
-**对应实际 Topic:** `/sys/thruster/thruster_01/thing/service/thruster_ctr_reply`
-
-```json
-{
-  "time": 1703123456789,
-   "code": 200,
-   "message": "success",
-    "tiltSwitch": 2,
-    "level": -2
-      
   
 }
 ```
@@ -561,153 +477,7 @@
 | `disk_usage_percent` | 磁盘占用率 % |
 
 
-#### 4.1.2 推进器数据
-**Topic:** `/sys/${productKey}/${deviceName}/thing/property/thruster_status`
-
-**对应实际 Topic:** `/sys/thruster/thruster_01/thing/property/thruster_status`
-
-```json
-{
-  "time": 1703123456789,
-
-   "id":"left",
-   "rotate_speed_rpm":1300,
-      "power_per":85,
-        "torque_per":75,
-        "electric_lift_per":65,
-        "gear":0,
-        "estop":0,
-        "cooling_water_temp_C":36.5,
-        "engine_oil_temp_C":36.5,
-        "engine_oil_pressure_pa":1100,
-        "battery_V":96  
-  
-}
-```
-
-![](https://cdn.nlark.com/yuque/0/2026/png/35874052/1780043564913-71910752-f156-44b7-b4cf-b3aa9e8f85e8.png)
-
-#### 4.1.3 IMU 数据
-**Topic:** `/sys/${productKey}/${deviceName}/thing/property/apm_imu`
-
-**对应实际 Topic:** `/sys/apm/apm_01/thing/property/apm_imu`
-
-```json
-{
-  "time": 1703123456789,
-
-    "orientation": {
-      "yaw_deg": 120.1,
-      "roll_deg": 1.2,
-      "pitch_deg": 0.5
-    },
-    "angular_velocity": {
-      "yaw_rate_dps": 0.5,
-      "roll_rate_dps": 0.1,
-      "pitch_rate_dps": 0.05
-    },
-    "linear_acceleration": {
-      "x_mps2": 0.01,
-      "y_mps2": 0.02,
-      "z_mps2": 9.81
-    }
-  
-}
-```
-
-#### 4.1.4 毫米波雷达数据
-**Topic:** `/sys/${productKey}/${deviceName}/thing/property/radar_mm`
-
-**对应实际 Topic:** `/sys/radar_mm/radar_mm_01/thing/property/radar_mm`
-
-```json
-{
-  "time": 1779272255654,
-
-
-    "targets": [
-      {
-        "x": 3.2899999618530273,
-        "y": -0.10999999940395355,
-        "v_x": 0,
-        "v_y": 0,
-        "size_w": 0.8899999856948853,
-        "size_l": 2.8299999237060547,
-        "size_h": 0.3400000035762787,
-        "objmotion_status": 0,
-        "track_id": 11
-      },
-      {
-        "x": 6.489999771118164,
-        "y": 1,
-        "v_x": 0,
-        "v_y": 0,
-        "size_w": 0.6800000071525574,
-        "size_l": 1.4499999284744263,
-        "size_h": 0.3499999940395355,
-        "objmotion_status": 0,
-        "track_id": 4
-      }
-    ]
-  
-}
-```
-
-#### 4.1.5 导航雷达扫描数据
-**Topic:** `/sys/${productKey}/${deviceName}/thing/property/radar_nav`
-
-**对应实际 Topic:** `/sys/radar_nav/radar_nav_01/thing/property/radar_nav`
-
-```json
-{
-  "time": 1703123456789,
-    "timestamps": [
-      {
-        "name": "scan_start",
-        "time": 1703123456000
-      },
-      {
-        "name": "scan_end",
-        "time": 1703123456700
-      },
-      {
-        "name": "signal_processing_end",
-        "time": 1703123456789
-      }
-    ],
-    "targets_num": 2,
-    "targets": [
-      {
-        "range_m": 45.2,
-        "bearing_deg": 32.5,
-        "intensity": 0.92,
-        "velocity_mps": 6.8
-      },
-      {
-        "range_m": 78.0,
-        "bearing_deg": 120.3,
-        "intensity": 0.45,
-        "velocity_mps": -2.3
-      }
-    ]
-  
-}
-```
-
-| 字段/位置 | 说明 |
-| --- | --- |
-| `timestamps` | 流程各时间戳数组 |
-| `timestamps[].name` | 流程阶段名称 |
-| `timestamps[].time` | 流程阶段时间，单位：毫秒 |
-| `targets_num` | 目标数量 |
-| `targets` | 追踪目标列表 |
-| `targets[].range_m` | 目标距离，单位：米 |
-| `targets[].bearing_deg` | 目标方位角，单位：度 |
-| `targets[].intensity` | 回波/目标强度 |
-| `targets[].velocity_mps` | 目标径向速度，单位：m/s |
-
-
-#### 4.1.6 导航雷达地图
+#### 4.1.2 导航雷达地图
 **Topic:** `/sys/${productKey}/${deviceName}/thing/property/radar_nav_map`
 
 **对应实际 Topic:** `/sys/radar_nav/radar_nav_01/thing/property/radar_nav_map`
@@ -755,7 +525,7 @@
 | cells | string | 栅格数据（可压缩后字符串） |
 
 
-#### 4.1.7 融合轨迹
+#### 4.1.3 融合轨迹
 **Topic:** `/sys/${productKey}/${deviceName}/thing/property/perception_trajectory`
 
 **对应实际 Topic:** `/sys/jetson/jetson_01/thing/property/perception_trajectory`
@@ -804,7 +574,7 @@
 | points | array | 轨迹点集 |
 
 
-#### 4.1.8 GPS 状态数据（MCU）
+#### 4.1.4 GPS 状态数据（MCU）
 **Topic:** `/sys/${productKey}/${deviceName}/thing/property/gps_status`
 
 **对应实际 Topic:** `/sys/gps/gps_01/thing/property/gps_status`
@@ -838,7 +608,7 @@
 | 5 | RTK 浮点解 |
 
 
-#### 4.1.9 气象站状态数据（MCU）
+#### 4.1.5 气象站状态数据（MCU）
 **Topic:** `/sys/${productKey}/${deviceName}/thing/property/weather_status`
 
 **对应实际 Topic:** `/sys/weather/weather_01/thing/property/weather_status`
@@ -864,7 +634,7 @@
 | `wind_direction_deg` | 风向(度) |
 
 
-#### 4.1.10 测深仪状态数据（MCU）
+#### 4.1.6 测深仪状态数据（MCU）
 **Topic:** `/sys/${productKey}/${deviceName}/thing/property/depth_status`
 
 **对应实际 Topic:** `/sys/depth/depth_01/thing/property/depth_status`
@@ -905,7 +675,7 @@
 | confidence | float | 置信度 |
 
 
-#### 4.1.11 电池状态数据（MCU）
+#### 4.1.7 电池状态数据（MCU）
 **Topic:** `/sys/${productKey}/${deviceName}/thing/property/battery_status`
 
 **对应实际 Topic:** `/sys/battery/battery_01/thing/property/battery_status`
@@ -943,7 +713,7 @@
 }
 ```
 
-#### 4.1.12 油箱状态数据（MCU）
+#### 4.1.8 油箱状态数据（MCU）
 **Topic:** `/sys/${productKey}/${deviceName}/thing/property/fuel_status`
 
 **对应实际 Topic:** `/sys/fuel/fuel_01/thing/property/fuel_status`
@@ -960,7 +730,7 @@
 }
 ```
 
-#### 4.1.13 MCU 系统状态（MCU）
+#### 4.1.9 MCU 系统状态（MCU）
 **Topic:** `/sys/${productKey}/${deviceName}/thing/property/mcu_status`
 
 **对应实际 Topic:** `/sys/mcu/mcu_01/thing/property/mcu_status`
@@ -1000,7 +770,7 @@
 
 
 
-#### 4.1.14 AIS 数据（MCU）
+#### 4.1.10 AIS 数据（MCU）
 **Topic:** `/sys/${productKey}/${deviceName}/thing/property/ais`
 
 **对应实际 Topic:** `/sys/ais/ais_01/thing/property/ais`
@@ -1014,7 +784,7 @@
 }
 ```
 
-#### 4.1.15 IO 设备状态（MCU）
+#### 4.1.11 IO 设备状态（MCU）
 **Topic:** `/sys/${productKey}/${deviceName}/thing/property/io_status`
 
 **对应实际 Topic:** `/sys/io/io_01/thing/property/io_status`
@@ -1047,7 +817,7 @@
 }
 ```
 
-#### 4.1.16 心跳状态
+#### 4.1.12 心跳状态
 **Jetson Topic:** `/sys/${productKey}/${deviceName}/thing/event/jetson_heartbeat`
 
 **Jetson 对应实际 Topic:** `/sys/jetson/jetson_01/thing/event/jetson_heartbeat`
@@ -1078,50 +848,10 @@
 }
 ```
 
-**APM飞控 Topic:** `/sys/${productKey}/${deviceName}/thing/event/apm_heartbeat`
-
-**APM飞控 对应实际 Topic:** `/sys/apm/apm_01/thing/event/apm_heartbeat`
-
-**APM飞控  心跳：**
-
-```json
-{
-  "time": 1703123456789,
-    "online": true,
-    "unit": "apm"
-
-}
-```
-
 | 参数 | 类型 | 说明 |
 | --- | --- | --- |
 | online | bool | 在线状态 |
-| unit | string | 单元标识：jetson/mcu |
-
-
-#### 4.1.17 APM飞控状态
-**Topic:** `/sys/${productKey}/${deviceName}/thing/property/status_apm`
-
-**对应实际 Topic:** `/sys/apm/apm_01/thing/property/status_apm`
-
-```json
-{
-  "time": 1703123456789,
-
-    "connected": "false"
-    "armed": "false"
-    "guided": "false"
-    "manual_input": "false"
-    "mode": "hode"
-    "system_status": 0
-  
-}
-```
-
-![](https://cdn.nlark.com/yuque/0/2026/png/35874052/1779184347846-bf7bf51e-9880-4f97-867a-6a5974c851d5.png)
-
-
-
+| unit | string | 单元标识：`jetson` / `mcu` |
 
 
 ### 4.2 事件数据
@@ -1281,16 +1011,11 @@
         "name": "gps",
         "status": "fail",
         "message": "RTK固定解未收敛"
-      },
-      {
-        "name": "thruster",
-        "status": "pass",
-        "message": ""
       }
     ],
     "summary": {
-      "total": 3,
-      "pass": 2,
+      "total": 2,
+      "pass": 1,
       "fail": 1
     }
   
@@ -1356,13 +1081,10 @@
 ### 6.2 通信频率建议
 | 数据类型 | 建议频率 | QoS |
 | --- | --- | --- |
-| IMU 数据 | 20-50 Hz | 0 |
 | GPS 数据 | 1-5 Hz | 0 |
-| 推进器数据 | 10 Hz | 1 |
 | 电池/燃料数据 | 1 Hz | 1 |
 | 气象站数据 | 1 Hz | 1 |
 | 视觉识别目标 | 1-5 Hz | 1 |
-| 雷达扫描数据 | 1-2 Hz | 0 |
 | 雷达地图数据 | 实时 | 1 |
 | 感知轨迹数据 | 实时 | 0 |
 | 报警事件 | 触发时立即上报 | 1 |

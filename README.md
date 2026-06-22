@@ -1,6 +1,6 @@
 # NEUXS 无人船 MQTT 通信协议
 
-NEUXS 无人船各子系统（Jetson、MCU、APM 及传感器）与云端之间的 MQTT 通信协议规范。
+NEUXS 无人船各子系统（Jetson、MCU 网关及其子设备）与云端之间的 MQTT 通信协议规范。
 
 | 项目 | 说明 |
 | --- | --- |
@@ -12,6 +12,8 @@ NEUXS 无人船各子系统（Jetson、MCU、APM 及传感器）与云端之间�
 ## 协议文档
 
 完整协议见 **[docs/protocol.md](docs/protocol.md)**，包含协议规范、话题架构、上下行数据格式、设备清单及附录。
+
+待决事项与实现差异见 **[docs/bug.md](docs/bug.md)**。
 
 ## Topic 模板
 
@@ -26,10 +28,8 @@ NEUXS 无人船各子系统（Jetson、MCU、APM 及传感器）与云端之间�
 
 | 功能 | productKey | deviceName |
 | --- | --- | --- |
-| Jetson 主控 | `jetson` | `jetson_01` |
-| MCU 执行单元 | `mcu` | `mcu_01` |
-| 推进器 | `thruster` | `thruster_01` |
-| APM 飞控 | `apm` | `apm_01` |
+| Jetson 主控（网关） | `jetson` | `jetson_01` |
+| MCU 执行单元（网关） | `mcu` | `mcu_01` |
 | GPS | `gps` | `gps_01` |
 | IO 控制器 | `io` | `io_01` |
 
