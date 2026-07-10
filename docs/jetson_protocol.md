@@ -341,29 +341,22 @@
   "params": {
     "identifier": "apm_params",
     "inputParams": {
-      "apm_param_list": [
-        {
-          "param_name": "MAX_SPEED",
-          "param_value": 5.2,
-          "param_type": "float"
-        },
-        {
-          "param_name": "SAFE_DISTANCE",
-          "param_value": 10,
-          "param_type": "int"
+          "param_id": "MAX_SPEED",
+          "value":
+            {
+              "integer": 0,
+              "real": 5.0
+            }
         }
-      ]
     }
-  }
 }
 ```
 
 | 字段 | 类型 | 说明 |
 | --- | --- | --- |
-| `inputParams.apm_param_list` | array | APM 参数列表 |
-| `inputParams.apm_param_list[].param_name` | string | 参数名 |
-| `inputParams.apm_param_list[].param_value` | number | 参数值 |
-| `inputParams.apm_param_list[].param_type` | string | 参数类型：`int` / `float` / `string` |
+| `inputParams.param_id` | string | 参数名 |
+| `inputParams.value[].integer` | int | 整数值 （参数为整数时real字段写0）|
+| `inputParams.value[].real` | float | 浮点数 （参数为浮点数时integer字段写0） |
 
 ### 3.8 相机控制（`cam_ctrl`）
 
@@ -724,11 +717,14 @@
         {
           "class_name": "buoy",
           "confidence": 0.96,
-          "bbox_x": 120,
-          "bbox_y": 80,
-          "bbox_width": 200,
-          "bbox_height": 150,
-          "relative_angle_deg": 31.1257
+          "bbox":
+            {
+              "x": 120,
+              "y": 10,
+              "width": 980,
+              "height": 10,
+            },
+          "rel_ang_deg": 31.1257
         }
       ]
     }
@@ -743,8 +739,11 @@
 | `value.targets_count` | int | 目标数量 |
 | `value.targets[].class_name` | string | 目标类别（见附录） |
 | `value.targets[].confidence` | float | 置信度 0~1 |
-| `value.targets[].bbox_x/y/width/height` | int | 边界框像素坐标 |
-| `value.targets[].relative_angle_deg` | float | 相对角度（°） |
+| `value.targets[].bbox.x` | int | 边界框x像素坐标 |
+| `value.targets[].bbox.y` | int | 边界框y像素坐标 |
+| `value.targets[].bbox.width` | int | 边界框宽度 |
+| `value.targets[].bbox.height` | int | 边界框高度 |
+| `value.targets[].rel_ang_deg` | float | 相对角度（°） |
 
 ---
 
