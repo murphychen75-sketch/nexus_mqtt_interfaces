@@ -493,18 +493,23 @@
   "requestId": "",
   "method": "thing.property.post",
   "params": {
-    "identifier": "radar_mm",
-    "sample_time_ms": 1779272255650,
     "targets": [
       {
-        "position_x_m": 3.29,
-        "position_y_m": -0.11,
-        "velocity_x_mps": 0,
-        "velocity_y_mps": 0,
-        "size_width_m": 0.89,
-        "size_length_m": 2.83,
-        "size_height_m": 0.34,
-        "motion_status": 0,
+        "x": 12.2,
+        "y": 23.2,
+        "z": 1.23,
+        "width": 1.2,
+        "length": 3.45,
+        "heigth": 1.23,
+        "xvel_abs": 1.2,
+        "yvel_abs": 2.3,
+        "xacc_abs": 0.1,
+        "yacc_abs": 0.8,
+        "heading_angle": 24.4,
+        "classify_type": 1,
+        "classfiy_prob": 0.89,
+        "objmotion_status": 1,
+        "obstacle_prob": 0.123,
         "track_id": 11
       }
     ]
@@ -514,16 +519,22 @@
 
 | 字段 | 类型 | 说明 |
 | --- | --- | --- |
-| `sample_time_ms` | int | 采样时间（毫秒） |
-| `targets[].position_x_m` | float | 目标 X 坐标（m） |
-| `targets[].position_y_m` | float | 目标 Y 坐标（m） |
-| `targets[].velocity_x_mps` | float | X 方向速度（m/s） |
-| `targets[].velocity_y_mps` | float | Y 方向速度（m/s） |
-| `targets[].size_width_m` | float | 目标宽度（m） |
-| `targets[].size_length_m` | float | 目标长度（m） |
-| `targets[].size_height_m` | float | 目标高度（m） |
-| `targets[].motion_status` | int | 运动状态 |
-| `targets[].track_id` | int | 跟踪 ID |
+| `targets[].x` | float | 目标中心纵向位置 (m) |
+| `targets[].y` | float | 目标中心横向位置 (m) |
+| `targets[].z` | float | 目标中心垂向位置 (m) |
+| `targets[].width` | float | 目标包围框宽度（m） |
+| `targets[].length` | float | 目标包围框长度（m） |
+| `targets[].height` | float | 目标包围框高度（m）|
+| `targets[].xvel_abs` | float | 目标纵向绝对速度 (m/s) |
+| `targets[].yvel_abs` | float | 目标横向绝对速度 (m/s) |
+| `targets[].xacc_abs` | float | 目标纵向绝对加速度 (m/s/s) |
+| `targets[].yacc_abs` | float | 目标横向绝对加速度 (m/s/s) |
+| `targets[].heading_angle` | float | 目标航向角（+左 -右） |
+| `targets[].classify_type` | float | #目标类别  0未知目标 1行人 2自行车 3小汽车 4大卡车 (移植于车载雷达，相关目标分类算法还未完成船端迁移) |
+| `targets[].classify_prob` | float | 目标分类概率 |
+| `targets[].objmotion_status` | float | # 动静状态: 0 静止, 1 运动 |
+| `targets[].obstacle_prob` | float | 障碍物概率 |
+| `targets[].track_id` | float | 跟踪 ID |
 
 ### 4.5 融合感知轨迹（`perception_trajectory`）
 
@@ -768,6 +779,17 @@
 | `buoy` | 浮标 |
 | `obstacle` | 障碍物 |
 | `person` | 人员 |
+
+### 5.2 毫米波雷达目标类别（`classify_name`）
+
+| 值 | 说明 |
+| --- | --- |
+| `0` | 未知目标 |
+| `1` | 行人 |
+| `2` | 自行车 |
+| `3` | 小汽车 |
+| `4` | 大卡车 |
+
 
 ### 5.3 通信频率建议
 
