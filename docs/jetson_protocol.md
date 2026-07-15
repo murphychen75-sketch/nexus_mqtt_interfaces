@@ -153,19 +153,13 @@
 
 ```json
 {
-  "id": "req-uuid-001",
-  "reportTime": 1703123456789,
-  "deviceId": "jetson.jetson_01",
-  "tenantId": "tenant_xxx",
-  "requestId": "req-uuid-001",
-  "method": "thing.service.invoke",
-  "params": {
-    "identifier": "estop",
-    "inputParams": {
-      "estop": true,
-      "source_type": "shore"
-    }
-  }
+"requestId": "服务端下发消息里的 requestId",
+"method": "thing.service.invoke_reply",
+"data": {
+"result": "ok"
+},
+"code": 0,
+"msg": "success"
 }
 ```
 
@@ -493,6 +487,7 @@
   "requestId": "",
   "method": "thing.property.post",
   "params": {
+    "identifier": "radar_mm",
     "targets": [
       {
         "x": 12.2,
@@ -550,37 +545,27 @@
   "method": "thing.property.post",
   "params": {
     "identifier": "perception_trajectory",
-    "trajectories_count": 1,
-    "trajectories": [
-      {
-        "track_id": 101,
-        "object_type": "vehicle",
-        "points": [
-          {
-            "lat": 31.1256789,
-            "lon": 121.1256789,
-            "capture_time_ms": 1703123456000,
-            "speed_mps": 5.2,
-            "heading_deg": 90.0,
-            "order": 1
-          }
-        ]
-      }
-    ]
+    "t_sec":  170312345678,
+    "x": 232.3,
+    "y": 526.8,
+    "v_x": 12.3,
+    "v_y": 6.9,
+    "covariance":[1 2 3 4
+                  2 3 4 2
+                  2 4 5 3
+                  3 5 3 2]
   }
 }
 ```
 
 | 字段 | 类型 | 说明 |
 | --- | --- | --- |
-| `trajectories_count` | int | 轨迹数量 |
-| `trajectories[].track_id` | int | 目标跟踪 ID |
-| `trajectories[].object_type` | string | 目标类型（见附录） |
-| `trajectories[].points[].lat` / `lon` | float | 轨迹点经纬度 |
-| `trajectories[].points[].capture_time_ms` | int | 观测时间（毫秒） |
-| `trajectories[].points[].speed_mps` | float | 速度（m/s） |
-| `trajectories[].points[].heading_deg` | float | 航向角（°） |
-| `trajectories[].points[].order` | int | 点序号 |
+| `t_sec` | float | 标记时间戳 |
+| `x` | float | 目标相对本船x坐标（m） |
+| `y` | float | 目标相对本船y坐标（m） |
+| `v_x` | float | 目标横向速度(m/s) |
+| `v_y` | float | 目标纵向速度(m/s) |
+| `covariance` | float[16] | x y v_x v_y的4x4协方差矩阵|
 
 ### 4.6 报警事件（`alarm`）
 
@@ -760,17 +745,8 @@
 
 ## 5. 附录
 
-### 5.1 对象类型（`object_type`）
 
-| 值 | 说明 |
-| --- | --- |
-| `vehicle` | 船舶/车辆 |
-| `pedestrian` | 行人 |
-| `buoy` | 浮标 |
-| `obstacle` | 障碍物 |
-| `unknown` | 未知类型 |
-
-### 5.2 视觉目标类别（`class_name`）
+### 5.1 视觉目标类别（`class_name`）
 
 | 值 | 说明 |
 | --- | --- |
