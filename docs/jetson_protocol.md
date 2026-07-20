@@ -14,9 +14,11 @@
 | productKey | deviceName | 说明 |
 | --- | --- | --- |
 | `jetson` | `jetson_01` | Jetson 主控 |
-| `cam` | `cam_01` | 相机 |
+| `cam` | `gmsl_01` | GMSL相机 |
+| `cam` | `hs360_01` | 环视360相机 |
 | `vision` | `vision_01` | 视觉识别 |
 | `radar_mm` | `radar_mm_01` | 毫米波雷达 |
+| `navradar` | `navradar_01` |三航雷达 |
 
 ### 1.1 与主协议的关系
 
@@ -142,6 +144,11 @@
 | 方向 | identifier | Topic | Method | QoS | 说明 |
 | --- | --- | --- | --- | --- | --- |
 | 上行 | `radar_mm` | `/sys/radar_mm/radar_mm_01/thing/property/post` | `thing.property.post` | 0 | 毫米波目标（20 Hz） |
+#### 三航雷达（`navradar/navradar_01`）
+
+| 方向 | identifier | Topic | Method | QoS | 说明 |
+| --- | --- | --- | --- | --- | --- |
+| 上行 | `navradar` | `/sys/navradar/navradar_01/thing/property/post` | `thing.property.post` | 1 | 识别目标（5 Hz） |
 
 ---
 
@@ -153,13 +160,19 @@
 
 ```json
 {
-"requestId": "服务端下发消息里的 requestId",
-"method": "thing.service.invoke_reply",
-"data": {
-"result": "ok"
-},
-"code": 0,
-"msg": "success"
+  "id": "req-xxx",
+  "reportTime": 1703123456789,
+  "deviceId": "jetson.jetson_01",
+  "tenantId": "tenant_xxx",
+  "requestId": "req-xxx",
+  "method": "thing.service.invoke",
+  "params": {
+    "identifier": "estop",
+    "inputParams": {
+      "estop": true,
+      "source_type": "shore"
+    }
+  }
 }
 ```
 
@@ -174,21 +187,13 @@
 
 ```json
 {
-  "id": "resp-uuid-001",
-  "reportTime": 1703123456800,
-  "deviceId": "jetson.jetson_01",
-  "tenantId": "tenant_xxx",
-  "requestId": "req-uuid-001",
-  "method": "thing.service.invoke",
-  "params": {
-    "identifier": "estop",
-    "inputParams": {
-      "estop": true,
-      "source_type": "shore"
-    }
-  },
-  "code": 0,
-  "msg": "success"
+"requestId": "服务端下发消息里的 requestId",
+"method": "thing.service.invoke_reply",
+"data": {
+"result": "ok"
+},
+"code": 0,
+"msg": "success"
 }
 ```
 
@@ -349,8 +354,8 @@
 | 字段 | 类型 | 说明 |
 | --- | --- | --- |
 | `inputParams.param_id` | string | 参数名 |
-| `inputParams.value[].integer` | int | 整数值 （参数为整数时real字段写0）|
-| `inputParams.value[].real` | float | 浮点数 （参数为浮点数时integer字段写0） |
+| `inputParams.value.integer` | int | 整数值 （参数为整数时real字段写0）|
+| `inputParams.value.real` | float | 浮点数 （参数为浮点数时integer字段写0） |
 
 ### 3.8 相机控制（`cam_ctrl`）
 
@@ -488,26 +493,27 @@
   "method": "thing.property.post",
   "params": {
     "identifier": "radar_mm",
-    "targets": [
-      {
-        "x": 12.2,
-        "y": 23.2,
-        "z": 1.23,
-        "width": 1.2,
-        "length": 3.45,
-        "heigth": 1.23,
-        "xvel_abs": 1.2,
-        "yvel_abs": 2.3,
-        "xacc_abs": 0.1,
-        "yacc_abs": 0.8,
-        "heading_angle": 24.4,
-        "classify_type": 1,
-        "classfiy_prob": 0.89,
-        "objmotion_status": 1,
-        "obstacle_prob": 0.123,
-        "track_id": 11
-      }
-    ]
+        "targets_count": 23,
+          "targets": [
+            {
+              "x": 12.2,
+              "y": 23.2,
+              "z": 1.23,
+              "width": 1.2,
+              "length": 3.45,
+              "heigth": 1.23,
+              "xvel_abs": 1.2,
+              "yvel_abs": 2.3,
+              "xacc_abs": 0.1,
+              "yacc_abs": 0.8,
+              "heading_angle": 24.4,
+              "classify_type": 1,
+              "classfiy_prob": 0.89,
+              "objmotion_status": 1,
+              "obstacle_prob": 0.123,
+              "track_id": 11
+            }
+          ]
   }
 }
 ```
@@ -519,7 +525,7 @@
 | `targets[].z` | float | 目标中心垂向位置 (m) |
 | `targets[].width` | float | 目标包围框宽度（m） |
 | `targets[].length` | float | 目标包围框长度（m） |
-| `targets[].height` | float | 目标包围框高度（m）|
+| `targets[].heigth` | float | 目标包围框高度（m）|
 | `targets[].xvel_abs` | float | 目标纵向绝对速度 (m/s) |
 | `targets[].yvel_abs` | float | 目标横向绝对速度 (m/s) |
 | `targets[].xacc_abs` | float | 目标纵向绝对加速度 (m/s/s) |
@@ -612,7 +618,9 @@
     "identifier": "heartbeat",
     "value": {
       "online": true,
-      "unit_type": "jetson"
+      "unit_type": "jetson",
+      "armed_status":false,
+      "control_mode":"auto"
     }
   }
 }
@@ -622,7 +630,8 @@
 | --- | --- | --- |
 | `value.online` | bool | 在线状态 |
 | `value.unit_type` | string | 单元标识：`jetson` |
-
+| `value.armed_status` | bool | 是否解锁 |
+| `value.control_mode` | string | 操作模式 |
 ### 4.8 航点信息更新（`mission_delta`）
 
 **设备：** `jetson/jetson_01`
@@ -703,10 +712,11 @@
   "params": {
     "identifier": "vision_detections",
     "value": {
-      "timestamps": [
-        { "stage_name": "image_capture", "time_ms": 1703123456000 },
-        { "stage_name": "preprocessing_start", "time_ms": 1703123456100 },
-        { "stage_name": "inference_end", "time_ms": 1703123456780 }
+      "timestamps":
+     [
+        { "name": "image_capture", "time_ms": 1703123456000 },
+        { "name": "preprocessing_start", "time_ms": 1703123456100 },
+        { "name": "inference_end", "time_ms": 1703123456780 }
       ],
       "targets_count": 1,
       "targets": [
@@ -718,7 +728,7 @@
               "x": 120,
               "y": 10,
               "width": 980,
-              "height": 10,
+              "height": 10
             },
           "rel_ang_deg": 31.1257
         }
@@ -740,7 +750,60 @@
 | `value.targets[].bbox.width` | int | 边界框宽度 |
 | `value.targets[].bbox.height` | int | 边界框高度 |
 | `value.targets[].rel_ang_deg` | float | 相对角度（°） |
+### 4.11 三航识别目标（`navradar_detections`）
 
+**设备：** `navradar/navradar_01`
+
+```json
+{
+  "id": "evt-xxx",
+  "reportTime": 1703123456789,
+  "deviceId": "navradar.navradar_01",
+  "tenantId": "tenant_xxx",
+  "requestId": "",
+  "method": "thing.event.post",
+  "params": {
+    "identifier": "navradar_detections",
+    "value": {
+      "target_count":1,
+      [
+        "target_id": 551,
+        "distance": 630,
+        "azimuth": 257,
+        "speed": 0.4000000059604645,
+        "speed direction": 347,
+        "longitude": 119.32875061035156,
+        "latitude": 34.75439453125,
+        "ais message id": 0,
+        "ais user id": 0,
+        "ais navigation status": 0,
+        "ais_sog":0.0,
+        "ais longitude": 0.0,
+        "ais latitude": 0.0,
+        "ais_cog": 0.0,
+        "ais actual heading": 0,
+        "ais utc second": 0
+      ]
+    }
+  }
+}
+```
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `value.targets_count` | int | 目标数量 |
+| `value[].target_id` | string | 处理阶段名称 |
+| `value[].distance` | int | 阶段时间（毫秒） |
+| `value.targets_count` | int | 目标数量 |
+| `value.targets[].class_name` | string | 目标类别（见附录） |
+| `value.targets[].confidence` | float | 置信度 0~1 |
+| `value.targets[].bbox.x` | int | 边界框x像素坐标 |
+| `value.targets[].bbox.y` | int | 边界框y像素坐标 |
+| `value.targets[].bbox.width` | int | 边界框宽度 |
+| `value.targets[].bbox.height` | int | 边界框高度 |
+| `value.targets[].rel_ang_deg` | float | 相对角度（°） |
+
+---
 ---
 
 ## 5. 附录
